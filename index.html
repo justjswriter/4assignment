@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Model Marketplace</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+        }
+        .model-card {
+            border: 1px solid #ccc;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+        .model-card button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px;
+            border: none;
+            cursor: pointer;
+        }
+        #walletAddress {
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+<h1>AI Model Marketplace</h1>
+<div>
+    <span id="walletAddress">Wallet: Not connected</span>
+    <button id="connectWalletButton">Connect Wallet</button>
+</div>
+<div>
+    <h2>Your Token Balance: <span id="tokenBalance">0</span> ERC-20 tokens</h2>
+    <button id="refreshBalanceButton">Refresh Balance</button>
+</div>
+<div>
+    <h3>AI Models for Sale</h3>
+    <div id="aiModelsList"></div>
+</div>
+<div>
+    <h3>Add New AI Model</h3>
+    <form id="addModelForm">
+        <label for="modelName">Model Name:</label>
+        <input type="text" id="modelName" required><br><br>
+        <label for="modelDescription">Description:</label>
+        <textarea id="modelDescription" required></textarea><br><br>
+        <label for="modelPrice">Price (in ERC-20 tokens):</label>
+        <input type="number" id="modelPrice" required><br><br>
+        <label for="modelFile">Model File (URL or File):</label>
+        <input type="file" id="modelFile" required><br><br>
+        <button type="submit">Add Model</button>
+    </form>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/web3@1.6.1/dist/web3.min.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
