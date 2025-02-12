@@ -1,9 +1,10 @@
+
 let web3;
 let userWallet;
 let tokenContract;
 let aiModels = [];
 
-const tokenAddress = "0x5ff9B26554A15c026ebc5a68535894226771C54F"; // Your ERC-20 token address
+const tokenAddress = "0x544C635d195C2b734B891b1c5a9C598997ab087b";
 const tokenABI = [
     {
         "inputs": [
@@ -55,54 +56,6 @@ const tokenABI = [
             }
         ],
         "name": "approve",
-        "outputs": [
-            {
-                "internalType": "bool",
-                "name": "",
-                "type": "bool"
-            }
-        ],
-        "stateMutability": "nonpayable",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "address",
-                "name": "spender",
-                "type": "address"
-            },
-            {
-                "internalType": "uint256",
-                "name": "subtractedValue",
-                "type": "uint256"
-            }
-        ],
-        "name": "decreaseAllowance",
-        "outputs": [
-            {
-                "internalType": "bool",
-                "name": "",
-                "type": "bool"
-            }
-        ],
-        "stateMutability": "nonpayable",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "address",
-                "name": "spender",
-                "type": "address"
-            },
-            {
-                "internalType": "uint256",
-                "name": "addedValue",
-                "type": "uint256"
-            }
-        ],
-        "name": "increaseAllowance",
         "outputs": [
             {
                 "internalType": "bool",
@@ -291,51 +244,65 @@ const tokenABI = [
 if (typeof window.ethereum !== 'undefined') {
     web3 = new Web3(window.ethereum);
 
-    // Connect wallet button event
     document.getElementById("connectWalletButton").onclick = async () => {
         try {
             const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
             userWallet = accounts[0];
             document.getElementById("walletAddress").innerText = `Wallet: ${userWallet}`;
             initializeTokenContract();
-            await getTokenBalance(); // Fetch balance after wallet connects
+            await getTokenBalance();
+            listenForTransfers();
         } catch (err) {
             alert("Error connecting to wallet: " + err);
         }
     };
+
+    window.addEventListener("load", async () => {
+        if (window.ethereum.selectedAddress) {
+            userWallet = window.ethereum.selectedAddress;
+            document.getElementById("walletAddress").innerText = `Wallet: ${userWallet}`;
+            initializeTokenContract();
+            await getTokenBalance();
+            listenForTransfers();
+        }
+    });
 } else {
     alert("Please install MetaMask!");
 }
 
-// Function to initialize the token contract
 const initializeTokenContract = () => {
-    console.log("Initializing contract...");
     tokenContract = new web3.eth.Contract(tokenABI, tokenAddress);
-    console.log("Contract initialized:", tokenContract);
 };
 
-// Fetch and display the user's token balance
 const getTokenBalance = async () => {
-    if (!userWallet) {
-        console.log("No wallet connected");
-        return;
-    }
+    if (!userWallet) return;
     try {
-        console.log("Fetching balance for wallet:", userWallet);
+        console.log("🔄 Fetching latest balance...");
         const balance = await tokenContract.methods.balanceOf(userWallet).call();
-        console.log("Balance fetched:", balance);
-
-        // Convert the balance from wei to ether (assuming the token has 18 decimals)
         const balanceInTokens = web3.utils.fromWei(balance, 'ether');
-        console.log("Balance in tokens:", balanceInTokens);
-
+        console.log("💰 Updated Balance:", balanceInTokens);
         document.getElementById('tokenBalance').innerText = balanceInTokens;
     } catch (error) {
-        console.error("Error fetching balance:", error);
+        console.error("❌ Error fetching balance:", error);
     }
 };
-z
-// Event listener to refresh balance
+
+const listenForTransfers = () => {
+    if (!tokenContract || !userWallet) return;
+
+    console.log("🔔 Listening for Transfer events...");
+
+    tokenContract.events.Transfer()
+        .on("data", async (event) => {
+            if (event.returnValues.to.toLowerCase() === userWallet.toLowerCase() ||
+                event.returnValues.from.toLowerCase() === userWallet.toLowerCase()) {
+                console.log("🔔 Transfer detected! Fetching updated balance...");
+                await getTokenBalance();
+            }
+        })
+        .on("error", (error) => console.error("❌ Event error:", error));
+};
+
 document.getElementById('refreshBalanceButton').onclick = async () => {
     if (userWallet) {
         await getTokenBalance();
@@ -344,10 +311,9 @@ document.getElementById('refreshBalanceButton').onclick = async () => {
     }
 };
 
-// Display AI Models
 const displayModels = () => {
     const aiModelsListElement = document.getElementById('aiModelsList');
-    aiModelsListElement.innerHTML = ""; // Clear existing models
+    aiModelsListElement.innerHTML = "";
 
     aiModels.forEach(model => {
         const modelElement = document.createElement('div');
@@ -355,15 +321,14 @@ const displayModels = () => {
         modelElement.innerHTML = `
             <h3>${model.name}</h3>
             <p>${model.description}</p>
-            <p>Price: ${model.price} ERC-20 tokens</p>
+            <p>Price: ${model.price} MTK</p>
             <p>Seller: ${model.seller}</p>
-            <button onclick="buyModel('${model.name}', ${model.price}, '${model.seller}')">Buy</button>
+            <button onclick="buyModel('${model.name}', '${model.price}', '${model.seller}')">Buy</button>
         `;
         aiModelsListElement.appendChild(modelElement);
     });
 };
 
-// Function to handle buying AI models
 const buyModel = async (modelName, price, seller) => {
     if (!userWallet) {
         alert("Please connect your wallet first.");
@@ -371,62 +336,36 @@ const buyModel = async (modelName, price, seller) => {
     }
 
     try {
-        // Transfer ERC-20 tokens from the buyer to the seller
-        await tokenContract.methods.transfer(seller, price).send({ from: userWallet });
+        const priceInWei = web3.utils.toWei(price.toString(), "ether");
+        console.log(`💰 Buying ${modelName} for ${price} MTK (Wei: ${priceInWei})`);
 
-        // Notify the user about successful purchase
-        alert(`Purchase of ${modelName} was successful!`);
+        const receipt = await tokenContract.methods.transfer(seller, priceInWei).send({ from: userWallet });
+        console.log("✅ Purchase successful!", receipt);
 
-        // Optionally remove the model from the list (mark as sold)
+        alert(`✅ Purchase of ${modelName} successful!`);
         aiModels = aiModels.filter(m => m.name !== modelName);
         displayModels();
 
-        // Refresh the token balance after the purchase
-        await getTokenBalance();
-
+        console.log("⏳ Waiting 5 seconds before refreshing balance...");
+        setTimeout(async () => {
+            console.log("🔄 Manually fetching balance...");
+            await getTokenBalance();
+        }, 5000);
     } catch (error) {
-        alert("Error during purchase: " + error);
+        alert("❌ Error during purchase: " + error.message);
     }
 };
 
-
-// Form submission to add new AI model
 document.getElementById('addModelForm').onsubmit = async (e) => {
     e.preventDefault();
-
-    const modelName = document.getElementById('modelName').value;
-    const modelDescription = document.getElementById('modelDescription').value;
-    const modelPrice = document.getElementById('modelPrice').value;
-    const modelFile = document.getElementById('modelFile').files[0];
-
-    // Simulate uploading the model to IPFS (or use any service for actual file storage)
-    const modelFileUrl = await uploadToIPFS(modelFile);  // Implement uploadToIPFS as per your choice of service
-
-    // Add the new model to the AI models list
     aiModels.push({
-        name: modelName,
-        description: modelDescription,
-        price: modelPrice,
-        seller: userWallet, // The seller is the user connected to the wallet
-        fileUrl: modelFileUrl
+        name: document.getElementById('modelName').value,
+        description: document.getElementById('modelDescription').value,
+        price: document.getElementById('modelPrice').value,
+        seller: userWallet
     });
-
-    // Refresh the displayed models
     displayModels();
 };
 
-// Example upload function (using a mock URL or IPFS service)
-const uploadToIPFS = async (file) => {
-    // Implement file upload to IPFS service (e.g., Pinata or Infura)
-    // Here, we're just mocking the process by returning a dummy URL
-    return new Promise(resolve => {
-        setTimeout(() => {
-            resolve("https://ipfs.io/ipfs/your_file_hash_here");
-        }, 1000);
-    });
-};
-
-// On page load, if the wallet is already connected, display models
 if (userWallet) {
     displayModels();
-}
