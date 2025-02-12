@@ -3,8 +3,9 @@ let web3;
 let userWallet;
 let tokenContract;
 let aiModels = [];
+let boughtModels = [];
 
-const tokenAddress = "0x544C635d195C2b734B891b1c5a9C598997ab087b";
+const tokenAddress = "0x25dFd02E7fd0CA06d67bf3C53A555cee50E2E818";
 const tokenABI = [
     {
         "inputs": [
@@ -240,7 +241,6 @@ const tokenABI = [
         "type": "function"
     }
 ];
-
 if (typeof window.ethereum !== 'undefined') {
     web3 = new Web3(window.ethereum);
 
@@ -251,7 +251,6 @@ if (typeof window.ethereum !== 'undefined') {
             document.getElementById("walletAddress").innerText = `Wallet: ${userWallet}`;
             initializeTokenContract();
             await getTokenBalance();
-            listenForTransfers();
         } catch (err) {
             alert("Error connecting to wallet: " + err);
         }
@@ -263,7 +262,6 @@ if (typeof window.ethereum !== 'undefined') {
             document.getElementById("walletAddress").innerText = `Wallet: ${userWallet}`;
             initializeTokenContract();
             await getTokenBalance();
-            listenForTransfers();
         }
     });
 } else {
@@ -277,30 +275,11 @@ const initializeTokenContract = () => {
 const getTokenBalance = async () => {
     if (!userWallet) return;
     try {
-        console.log("🔄 Fetching latest balance...");
         const balance = await tokenContract.methods.balanceOf(userWallet).call();
-        const balanceInTokens = web3.utils.fromWei(balance, 'ether');
-        console.log("💰 Updated Balance:", balanceInTokens);
-        document.getElementById('tokenBalance').innerText = balanceInTokens;
+        document.getElementById('tokenBalance').innerText = web3.utils.fromWei(balance, 'ether');
     } catch (error) {
-        console.error("❌ Error fetching balance:", error);
+        console.error("Error fetching balance:", error);
     }
-};
-
-const listenForTransfers = () => {
-    if (!tokenContract || !userWallet) return;
-
-    console.log("🔔 Listening for Transfer events...");
-
-    tokenContract.events.Transfer()
-        .on("data", async (event) => {
-            if (event.returnValues.to.toLowerCase() === userWallet.toLowerCase() ||
-                event.returnValues.from.toLowerCase() === userWallet.toLowerCase()) {
-                console.log("🔔 Transfer detected! Fetching updated balance...");
-                await getTokenBalance();
-            }
-        })
-        .on("error", (error) => console.error("❌ Event error:", error));
 };
 
 document.getElementById('refreshBalanceButton').onclick = async () => {
@@ -308,6 +287,34 @@ document.getElementById('refreshBalanceButton').onclick = async () => {
         await getTokenBalance();
     } else {
         alert("Please connect your wallet first.");
+    }
+};
+const refreshBalanceButton = document.getElementById('refreshBalanceButton');
+
+refreshBalanceButton.onclick = async () => {
+    if (!userWallet) {
+        alert("Please connect your wallet first.");
+        return;
+    }
+
+    try {
+        console.log("🔄 Fetching latest balance...");
+        const balance = await tokenContract.methods.balanceOf(userWallet).call();
+        const balanceInTokens = web3.utils.fromWei(balance, 'ether');
+        console.log("💰 Updated Balance:", balanceInTokens);
+        document.getElementById('tokenBalance').innerText = balanceInTokens;
+    } catch (error) {
+        console.error("❌ Error fetching balance:", error);
+        alert("Error fetching balance! Check console for details.");
+    }
+};
+
+window.onload = async () => {
+    if (window.ethereum && window.ethereum.selectedAddress) {
+        userWallet = window.ethereum.selectedAddress;
+        document.getElementById("walletAddress").innerText = `Wallet: ${userWallet}`;
+        initializeTokenContract();
+        await refreshBalanceButton.onclick();
     }
 };
 
@@ -323,13 +330,32 @@ const displayModels = () => {
             <p>${model.description}</p>
             <p>Price: ${model.price} MTK</p>
             <p>Seller: ${model.seller}</p>
-            <button onclick="buyModel('${model.name}', '${model.price}', '${model.seller}')">Buy</button>
+            <p><a href="${model.file}" target="_blank">Download Model</a></p>
+            <button onclick="buyModel('${model.name}', '${model.price}', '${model.seller}', '${model.file}')">Buy</button>
         `;
         aiModelsListElement.appendChild(modelElement);
     });
 };
 
-const buyModel = async (modelName, price, seller) => {
+const displayBoughtModels = () => {
+    const boughtModelsListElement = document.getElementById('boughtModelsList');
+    boughtModelsListElement.innerHTML = "";
+
+    boughtModels.forEach(model => {
+        const modelElement = document.createElement('div');
+        modelElement.classList.add('model-card');
+        modelElement.innerHTML = `
+            <h3>${model.name}</h3>
+            <p>${model.description}</p>
+            <p>Price: ${model.price} MTK</p>
+            <p>Seller: ${model.seller}</p>
+            <p><a href="${model.file}" target="_blank">Download Model</a></p>
+        `;
+        boughtModelsListElement.appendChild(modelElement);
+    });
+};
+
+const buyModel = async (modelName, price, seller, file) => {
     if (!userWallet) {
         alert("Please connect your wallet first.");
         return;
@@ -337,20 +363,14 @@ const buyModel = async (modelName, price, seller) => {
 
     try {
         const priceInWei = web3.utils.toWei(price.toString(), "ether");
-        console.log(`💰 Buying ${modelName} for ${price} MTK (Wei: ${priceInWei})`);
-
-        const receipt = await tokenContract.methods.transfer(seller, priceInWei).send({ from: userWallet });
-        console.log("✅ Purchase successful!", receipt);
+        await tokenContract.methods.transfer(seller, priceInWei).send({ from: userWallet });
 
         alert(`✅ Purchase of ${modelName} successful!`);
         aiModels = aiModels.filter(m => m.name !== modelName);
-        displayModels();
+        boughtModels.push({ name: modelName, price, seller, file });
 
-        console.log("⏳ Waiting 5 seconds before refreshing balance...");
-        setTimeout(async () => {
-            console.log("🔄 Manually fetching balance...");
-            await getTokenBalance();
-        }, 5000);
+        displayModels();
+        displayBoughtModels();
     } catch (error) {
         alert("❌ Error during purchase: " + error.message);
     }
@@ -358,14 +378,16 @@ const buyModel = async (modelName, price, seller) => {
 
 document.getElementById('addModelForm').onsubmit = async (e) => {
     e.preventDefault();
+    const file = document.getElementById('modelFile').files[0];
+    const fileURL = URL.createObjectURL(file);
+
     aiModels.push({
         name: document.getElementById('modelName').value,
         description: document.getElementById('modelDescription').value,
         price: document.getElementById('modelPrice').value,
-        seller: userWallet
+        seller: userWallet,
+        file: fileURL
     });
+
     displayModels();
 };
-
-if (userWallet) {
-    displayModels();
