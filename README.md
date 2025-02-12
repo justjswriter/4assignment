@@ -16,7 +16,21 @@ Sell AI Models: Users can list their AI models for sale.
 
 Live Transfer Updates: Listens for blockchain events and updates balances accordingly.
 
+Firstly,we create contract in Remix and next create directory in our laptop through terminal and name it.
 
+![IMAGE 2025-02-12 15:43:00](https://github.com/user-attachments/assets/72ef75c4-56ee-4c43-a077-03f35078e513)
+Secondly, we open our project path and then install package.json.
+
+![IMAGE 2025-02-12 15:43:01](https://github.com/user-attachments/assets/dae7375d-9d32-4d96-bc4d-c4aca135d01a)
+
+Then,we install necessary libraries.
+
+![IMAGE 2025-02-12 15:43:03](https://github.com/user-attachments/assets/7fe73f02-2094-4966-9b5c-b0bd9e3647a5)
+
+
+ Then we create js files and html, in which we write code 
+ Lastly,do the deploy and open marketplace in local host.
+## Interaction with Marketplace
 ## Usage
 
 1️⃣ Connect Wallet
