@@ -4,7 +4,7 @@
 
 The AI Model Marketplace is a decentralized platform where users can buy and sell AI models using an ERC-20 token (MTK). The application interacts with a smart contract on the Ethereum blockchain and enables seamless transactions through MetaMask.
 
-🛠️ Features
+Features
 
 Wallet Connection: Users can connect their MetaMask wallet.
 
@@ -58,3 +58,4 @@ The new model will appear in the AI models list
 
 <img width="796" alt="Screenshot 2025-02-12 at 2 20 02 PM" src="https://github.com/user-attachments/assets/b077fb5f-f136-4e5d-a242-f768e05cc302" />
 
+SE-2321: Seisekeyeva Dariga, Bazarova Zarema, Zhalgassova Saniya
